@@ -1,11 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PatientRecord, DiagnosisResult, ImageAnalysis } from '@/types/diagnosis';
+import {
+  PatientRecord,
+  DiagnosisResult,
+  ImageAnalysis,
+} from '@/components/diagnosis';
 
 const STORAGE_KEYS = {
   PATIENT_RECORDS: 'patient_records',
   USER_SETTINGS: 'user_settings',
   SYNC_TIMESTAMP: 'last_sync',
-  OFFLINE_QUEUE: 'offline_queue'
+  OFFLINE_QUEUE: 'offline_queue',
 };
 
 export class LocalStorage {
@@ -15,7 +19,7 @@ export class LocalStorage {
       const existingRecords = await this.getPatientRecords();
       const updatedRecords = [...existingRecords, record];
       await AsyncStorage.setItem(
-        STORAGE_KEYS.PATIENT_RECORDS, 
+        STORAGE_KEYS.PATIENT_RECORDS,
         JSON.stringify(updatedRecords)
       );
     } catch (error) {
@@ -34,14 +38,17 @@ export class LocalStorage {
     }
   }
 
-  static async updatePatientRecord(id: string, updates: Partial<PatientRecord>): Promise<void> {
+  static async updatePatientRecord(
+    id: string,
+    updates: Partial<PatientRecord>
+  ): Promise<void> {
     try {
       const records = await this.getPatientRecords();
-      const updatedRecords = records.map(record => 
+      const updatedRecords = records.map((record) =>
         record.id === id ? { ...record, ...updates } : record
       );
       await AsyncStorage.setItem(
-        STORAGE_KEYS.PATIENT_RECORDS, 
+        STORAGE_KEYS.PATIENT_RECORDS,
         JSON.stringify(updatedRecords)
       );
     } catch (error) {
@@ -54,7 +61,7 @@ export class LocalStorage {
   static async saveUserSettings(settings: any): Promise<void> {
     try {
       await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_SETTINGS, 
+        STORAGE_KEYS.USER_SETTINGS,
         JSON.stringify(settings)
       );
     } catch (error) {
@@ -77,7 +84,7 @@ export class LocalStorage {
   static async updateSyncTimestamp(): Promise<void> {
     try {
       await AsyncStorage.setItem(
-        STORAGE_KEYS.SYNC_TIMESTAMP, 
+        STORAGE_KEYS.SYNC_TIMESTAMP,
         new Date().toISOString()
       );
     } catch (error) {
@@ -100,7 +107,7 @@ export class LocalStorage {
       const queue = await this.getOfflineQueue();
       const updatedQueue = [...queue, { ...data, timestamp: Date.now() }];
       await AsyncStorage.setItem(
-        STORAGE_KEYS.OFFLINE_QUEUE, 
+        STORAGE_KEYS.OFFLINE_QUEUE,
         JSON.stringify(updatedQueue)
       );
     } catch (error) {
@@ -140,14 +147,14 @@ export class LocalStorage {
     try {
       const keys = await AsyncStorage.getAllKeys();
       let totalSize = 0;
-      
+
       for (const key of keys) {
         const value = await AsyncStorage.getItem(key);
         if (value) {
           totalSize += new Blob([value]).size;
         }
       }
-      
+
       return totalSize;
     } catch (error) {
       console.error('Error calculating storage size:', error);

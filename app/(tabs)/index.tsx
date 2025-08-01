@@ -1,439 +1,232 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, ChevronRight, Thermometer, Heart, CircleAlert as AlertCircle, CircleCheck as CheckCircle2 } from 'lucide-react-native';
+import React from 'react';
+import { StyleSheet, Text, View, ScrollView, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Stethoscope, Camera, FileText } from 'lucide-react-native';
+import Colors from '@/constants/colors';
+import DiagnosisCard from '@/components/DiagnosisCard';
+import Button from '@/components/Button';
+import { useDiagnosis } from '@/hooks/use-diagnosis-store';
+import { symptoms } from '@/constants/symptoms';
+import AnimatedWrapper from "@/components/AnimatedWrapper";
 
-interface Symptom {
-  id: string;
-  name: string;
-  category: string;
-  severity: 'low' | 'medium' | 'high';
-}
 
-interface DiagnosisResult {
-  condition: string;
-  confidence: number;
-  symptoms: string[];
-  recommendations: string[];
-  urgency: 'low' | 'medium' | 'high';
-}
-
-const commonSymptoms: Symptom[] = [
-  { id: '1', name: 'Fever', category: 'General', severity: 'medium' },
-  { id: '2', name: 'Headache', category: 'General', severity: 'low' },
-  { id: '3', name: 'Chills', category: 'General', severity: 'medium' },
-  { id: '4', name: 'Muscle aches', category: 'General', severity: 'low' },
-  { id: '5', name: 'Skin ulcer', category: 'Skin', severity: 'high' },
-  { id: '6', name: 'Joint pain', category: 'Musculoskeletal', severity: 'medium' },
-  { id: '7', name: 'Fatigue', category: 'General', severity: 'low' },
-  { id: '8', name: 'Skin lesion', category: 'Skin', severity: 'medium' },
-];
-
-export default function SymptomChecker() {
-  const [searchText, setSearchText] = useState('');
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [vitalSigns, setVitalSigns] = useState({
-    temperature: '',
-    pulse: '',
-  });
-  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
-
-  const filteredSymptoms = commonSymptoms.filter(symptom =>
-    symptom.name.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  const toggleSymptom = (symptomId: string) => {
-    setSelectedSymptoms(prev =>
-      prev.includes(symptomId)
-        ? prev.filter(id => id !== symptomId)
-        : [...prev, symptomId]
-    );
-  };
-
-  const runDiagnosis = () => {
-    if (selectedSymptoms.length === 0) {
-      Alert.alert('No Symptoms', 'Please select at least one symptom to continue.');
-      return;
-    }
-
-    // Simple AI simulation based on selected symptoms
-    const selectedSymptomNames = selectedSymptoms.map(id =>
-      commonSymptoms.find(s => s.id === id)?.name || ''
-    );
-
-    let result: DiagnosisResult;
-
-    if (selectedSymptomNames.includes('Fever') && selectedSymptomNames.includes('Chills')) {
-      result = {
-        condition: 'Malaria (Suspected)',
-        confidence: 78,
-        symptoms: selectedSymptomNames,
-        recommendations: [
-          'Rapid diagnostic test (RDT) recommended',
-          'Monitor temperature every 4 hours',
-          'Ensure adequate fluid intake',
-          'Refer to health facility if condition worsens'
-        ],
-        urgency: 'high'
-      };
-    } else if (selectedSymptomNames.includes('Skin ulcer') || selectedSymptomNames.includes('Skin lesion')) {
-      result = {
-        condition: 'Buruli Ulcer (Possible)',
-        confidence: 65,
-        symptoms: selectedSymptomNames,
-        recommendations: [
-          'Clean wound with antiseptic solution',
-          'Apply sterile dressing',
-          'Document wound size and appearance',
-          'Refer to specialized care facility'
-        ],
-        urgency: 'medium'
-      };
-    } else {
-      result = {
-        condition: 'Common Viral Infection',
-        confidence: 55,
-        symptoms: selectedSymptomNames,
-        recommendations: [
-          'Rest and adequate hydration',
-          'Monitor symptoms for 24-48 hours',
-          'Return if symptoms worsen',
-          'Paracetamol for fever if available'
-        ],
-        urgency: 'low'
-      };
-    }
-
-    setDiagnosis(result);
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'high': return '#DC2626';
-      case 'medium': return '#EA580C';
-      case 'low': return '#059669';
-      default: return '#6B7280';
-    }
-  };
+export default function HomeScreen() {
+  const router = useRouter();
+  const { recentDiagnoses } = useDiagnosis();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Symptom Checker</Text>
-          <Text style={styles.subtitle}>Select symptoms to get diagnostic suggestions</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <AnimatedWrapper animationType="slideUp" style={styles.header}>
+        <Image
+          source={{
+            uri: 'https://images.unsplash.com/photo-1584982751601-97dcc096659c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
+          }}
+          style={styles.headerImage}
+        />
+        <View style={styles.overlay}>
+          <Text style={styles.title}>DiagnoLite</Text>
+          <Text style={styles.subtitle}>
+            AI-powered diagnostics for rural healthcare
+          </Text>
         </View>
+      </AnimatedWrapper>
 
-        {/* Vital Signs */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Vital Signs</Text>
-          <View style={styles.vitalSignsContainer}>
-            <View style={styles.vitalInput}>
-              <Thermometer size={20} color="#2563EB" />
-              <TextInput
-                style={styles.vitalTextInput}
-                placeholder="Temperature (°C)"
-                value={vitalSigns.temperature}
-                onChangeText={(text) => setVitalSigns(prev => ({ ...prev, temperature: text }))}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.vitalInput}>
-              <Heart size={20} color="#DC2626" />
-              <TextInput
-                style={styles.vitalTextInput}
-                placeholder="Pulse (bpm)"
-                value={vitalSigns.pulse}
-                onChangeText={(text) => setVitalSigns(prev => ({ ...prev, pulse: text }))}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Diagnostic Tools</Text>
+        <DiagnosisCard
+          title="Symptom Checker"
+          description="Check symptoms to get possible diagnoses"
+          icon={<Stethoscope size={24} color={Colors.primary} />}
+          route="/symptom-checker"
+          testID="symptom-checker-card"
+        />
+        <DiagnosisCard
+          title="Image Diagnosis"
+          description="Upload or take photos for visual diagnosis"
+          icon={<Camera size={24} color={Colors.primary} />}
+          route="/(tabs)/camera"
+          testID="image-diagnosis-card"
+        />
+        <DiagnosisCard
+          title="Treatment Guidelines"
+          description="Access treatment protocols and guidelines"
+          icon={<FileText size={24} color={Colors.primary} />}
+          route="/(tabs)/guidelines"
+          testID="guidelines-card"
+        />
+      </View>
 
-        {/* Symptom Search */}
+      {recentDiagnoses.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Symptoms</Text>
-          <View style={styles.searchContainer}>
-            <Search size={20} color="#6B7280" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search symptoms..."
-              value={searchText}
-              onChangeText={setSearchText}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Diagnoses</Text>
+            <Button
+              title="View All"
+              variant="outline"
+              size="small"
+              onPress={() => router.push('/(tabs)/settings')}
+              testID="view-all-button"
             />
           </View>
 
-          {/* Symptom List */}
-          <View style={styles.symptomList}>
-            {filteredSymptoms.map((symptom) => (
-              <TouchableOpacity
-                key={symptom.id}
-                style={[
-                  styles.symptomItem,
-                  selectedSymptoms.includes(symptom.id) && styles.symptomItemSelected
-                ]}
-                onPress={() => toggleSymptom(symptom.id)}
-              >
-                <View style={styles.symptomContent}>
-                  <Text style={[
-                    styles.symptomName,
-                    selectedSymptoms.includes(symptom.id) && styles.symptomNameSelected
-                  ]}>
-                    {symptom.name}
+          <View style={styles.recentCard}>
+            <Text style={styles.recentTitle}>
+              {new Date(recentDiagnoses[0].date).toLocaleDateString()}
+            </Text>
+            <View style={styles.symptoms}>
+              {recentDiagnoses[0].symptoms
+                .slice(0, 3)
+                .map((symptomId, index) => {
+                  // Get symptoms outside of the callback to avoid hooks rule violation
+                  const symptom = symptoms.find((s) => s.id === symptomId);
+                  return (
+                    <View key={index} style={styles.symptomTag}>
+                      <Text style={styles.symptomText}>
+                        {symptom?.name || symptomId}
+                      </Text>
+                    </View>
+                  );
+                })}
+              {recentDiagnoses[0].symptoms.length > 3 && (
+                <View style={styles.symptomTag}>
+                  <Text style={styles.symptomText}>
+                    +{recentDiagnoses[0].symptoms.length - 3} more
                   </Text>
-                  <Text style={styles.symptomCategory}>{symptom.category}</Text>
                 </View>
-                {selectedSymptoms.includes(symptom.id) && (
-                  <CheckCircle2 size={20} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-            ))}
+              )}
+            </View>
+            <Button
+              title="View Results"
+              onPress={() => router.push('/symptom-checker')}
+              style={styles.viewButton}
+              testID="view-results-button"
+            />
           </View>
         </View>
+      )}
 
-        {/* Analyze Button */}
-        {selectedSymptoms.length > 0 && (
-          <TouchableOpacity style={styles.analyzeButton} onPress={runDiagnosis}>
-            <Text style={styles.analyzeButtonText}>Analyze Symptoms</Text>
-            <ChevronRight size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-
-        {/* Diagnosis Results */}
-        {diagnosis && (
-          <View style={styles.diagnosisContainer}>
-            <View style={styles.diagnosisHeader}>
-              <AlertCircle size={24} color={getUrgencyColor(diagnosis.urgency)} />
-              <Text style={styles.diagnosisTitle}>Diagnostic Analysis</Text>
-            </View>
-            
-            <View style={styles.diagnosisResult}>
-              <Text style={styles.conditionName}>{diagnosis.condition}</Text>
-              <Text style={styles.confidence}>Confidence: {diagnosis.confidence}%</Text>
-              
-              <View style={[styles.urgencyBadge, { backgroundColor: getUrgencyColor(diagnosis.urgency) }]}>
-                <Text style={styles.urgencyText}>
-                  {diagnosis.urgency.toUpperCase()} PRIORITY
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.recommendationsSection}>
-              <Text style={styles.recommendationsTitle}>Recommended Actions:</Text>
-              {diagnosis.recommendations.map((rec, index) => (
-                <View key={index} style={styles.recommendationItem}>
-                  <Text style={styles.recommendationBullet}>•</Text>
-                  <Text style={styles.recommendationText}>{rec}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About DiagnoLite</Text>
+        <View style={styles.aboutCard}>
+          <Text style={styles.aboutText}>
+            DiagnoLite is an offline AI-based diagnostic tool designed for rural
+            healthcare workers. It helps perform basic diagnostic assessments
+            without internet connectivity.
+          </Text>
+          <Text style={styles.versionText}>Version 1.0.0</Text>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background,
   },
-  scrollView: {
-    flex: 1,
+  content: {
+    padding: 16,
   },
   header: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 24,
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: Colors.white,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748B',
-    lineHeight: 24,
+    color: Colors.white,
+    textAlign: 'center',
+    marginTop: 8,
   },
   section: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 16,
-  },
-  vitalSignsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  vitalInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  vitalTextInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1E293B',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1E293B',
-  },
-  symptomList: {
-    gap: 8,
-  },
-  symptomItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  symptomItemSelected: {
-    backgroundColor: '#EBF4FF',
-    borderColor: '#2563EB',
-  },
-  symptomContent: {
-    flex: 1,
-  },
-  symptomName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  symptomNameSelected: {
-    color: '#2563EB',
-  },
-  symptomCategory: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  analyzeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2563EB',
-    marginHorizontal: 20,
-    marginVertical: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  analyzeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  diagnosisContainer: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  diagnosisHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 8,
-  },
-  diagnosisTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  diagnosisResult: {
-    marginBottom: 20,
-  },
-  conditionName: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 16,
   },
-  confidence: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 12,
+  recentCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  urgencyBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  urgencyText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  recommendationsSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingTop: 16,
-  },
-  recommendationsTitle: {
+  recentTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
-  },
-  recommendationItem: {
-    flexDirection: 'row',
+    fontWeight: 'bold',
+    color: Colors.text,
     marginBottom: 8,
-    paddingRight: 8,
   },
-  recommendationBullet: {
-    fontSize: 16,
-    color: '#2563EB',
+  symptoms: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  symptomTag: {
+    backgroundColor: Colors.highlight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
     marginRight: 8,
-    width: 12,
+    marginBottom: 8,
   },
-  recommendationText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#374151',
+  symptomText: {
+    fontSize: 12,
+    color: Colors.primary,
+  },
+  viewButton: {
+    alignSelf: 'flex-end',
+  },
+  aboutCard: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  aboutText: {
+    fontSize: 14,
+    color: Colors.text,
     lineHeight: 22,
+    marginBottom: 16,
+  },
+  versionText: {
+    fontSize: 12,
+    color: Colors.textLight,
+    textAlign: 'right',
   },
 });
